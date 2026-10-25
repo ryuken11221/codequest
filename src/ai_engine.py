@@ -79,80 +79,73 @@ def list_models():
 
 
 def pick_default_model(models):
-    """Pick the best model from the detected list."""
-    if not models:
-        return None
-    for preferred in PREFERRED_OLLAMA:
-        if preferred in models:
-            return preferred
-    return models[0]
+    """Pick the best model from a detected list, or None."""
+    for pref in PREFERRED_OLLAMA:
+        for m in models:
+            if m == pref:
+                return m
+    if models:
+        return models[0]
+    return None
+
+
+def _ollama_chat(messages, model):
+    status, body = _http_json(
+        OLLAMA_HOST + "/api/chat",
+        body={"model": model, "messages": messages, "stream": False},
+    )
+    if status != 200 or not isinstance(body, dict):
+        raise RuntimeError(f"Ollama chat failed: status={status} body={body}")
+    return body.get("message", {}).get("content", "")
 
 
 # ---------------------------------------------------------------------------
-# Unified chat interface
+# OpenAI (fallback)
 # ---------------------------------------------------------------------------
-def chat(messages, model=None, temperature=0.7, max_tokens=2048):
-    """Send a chat completion request and return the text response.
-    
-    Args:
-        messages: list of {"role": "system"|"user"|"assistant", "content": str}
-        model: model name (auto-picked if None)
-        temperature: sampling temperature
-        max_tokens: max tokens in response
-    
-    Returns:
-        str: the assistant's text response
-    """
-    if model is None:
-        provider, models = list_models()
-        if provider == "ollama":
-            model = pick_default_model(models)
-        elif provider == "openai":
-            model = OPENAI_MODEL
-        else:
-            raise RuntimeError("No LLM provider available. Start Ollama or set OPENAI_API_KEY.")
-    
-    if model in PREFERRED_OLLAMA or provider_is_ollama(model):
-        return _chat_ollama(messages, model, temperature, max_tokens)
-    else:
-        return _chat_openai(messages, model, temperature, max_tokens)
-
-
-def provider_is_ollama(model):
-    return any(model.startswith(p) for p in ["qwen", "gemma", "llama", "mistral", "phi"])
-
-
-def _chat_ollama(messages, model, temperature, max_tokens):
-    url = OLLAMA_HOST + "/api/chat"
-    body = {
-        "model": model,
-        "messages": messages,
-        "stream": False,
-        "options": {"temperature": temperature, "num_predict": max_tokens},
-    }
-    status, body_resp = _http_json(url, body)
-    if status != 200:
-        raise RuntimeError(f"Ollama error ({status}): {body_resp}")
-    return body_resp.get("message", {}).get("content", "")
-
-
-def _chat_openai(messages, model, temperature, max_tokens):
+def _openai_chat(messages, model):
     if not OPENAI_API_KEY:
-        raise RuntimeError("OPENAI_API_KEY not set.")
-    url = "https://api.openai.com/v1/chat/completions"
-    headers = {"Authorization": f"Bearer {OPENAI_API_KEY}"}
-    body = {
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-    }
-    status, body_resp = _http_json(url, body, headers)
-    if status != 200:
-        raise RuntimeError(f"OpenAI error ({status}): {body_resp}")
-    return body_resp["choices"][0]["message"]["content"]
+        raise RuntimeError("No OPENAI_API_KEY set and Ollama unreachable.")
+    status, body = _http_json(
+        "https://api.openai.com/v1/chat/completions",
+        body={"model": model, "messages": messages},
+        headers={"Authorization": f"Bearer {OPENAI_API_KEY}"},
+    )
+    if status != 200 or not isinstance(body, dict):
+        raise RuntimeError(f"OpenAI chat failed: status={status} body={body}")
+    return body["choices"][0]["message"]["content"]
 
 
-def list_available_models():
-    """Convenience: return (provider, models) for display."""
-    return list_models()
+# ---------------------------------------------------------------------------
+# Public API
+# ---------------------------------------------------------------------------
+def chat(messages, model=None):
+    """Send a chat to the detected provider. `messages` is a list of
+    {"role": "system"|"user"|"assistant", "content": str} dicts.
+    Returns the assistant's text response."""
+    provider, models = list_models()
+    if provider == "ollama":
+        if model is None:
+            model = pick_default_model(models)
+        return _ollama_chat(messages, model)
+    if provider == "openai":
+        if model is None:
+            model = OPENAI_MODEL
+        return _openai_chat(messages, model)
+    raise RuntimeError("No AI provider available: start Ollama or set OPENAI_API_KEY.")
+
+
+def self_test():
+    """Quick connectivity check, returns a human-readable string."""
+    provider, models = list_models()
+    if provider == "none":
+        return "No AI backend found (no Ollama, no OPENAI_API_KEY)."
+    default = pick_default_model(models) if provider == "ollama" else (models[0] if models else OPENAI_MODEL)
+    try:
+        out = chat([{"role": "user", "content": "Reply with exactly: OK"}], model=default)
+        return f"{provider}/{default}: {out.strip()[:60]}"
+    except Exception as e:
+        return f"{provider}/{default} detected but chat failed: {e}"
+
+
+if __name__ == "__main__":
+    print(self_test())

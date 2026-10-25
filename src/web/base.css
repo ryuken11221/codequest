@@ -1,0 +1,243 @@
+/* CodeQuest 2 — base.css */
+/* Terminal-style game chrome. Keep it tight: dark bg, monospace, accent. */
+
+:root {
+  --bg: #0b0e14;
+  --panel: #11151f;
+  --border: #1f2533;
+  --text: #d7dce4;
+  --dim: #7c8797;
+  --accent: #6cf0c2;       /* success / primary */
+  --accent2: #f0b06c;      /* warm highlight */
+  --danger: #f07c6c;
+  --ok: #6cf0c2;
+  --warn: #f0d06c;
+  --err: #f07c6c;
+  --mono: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+body {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* --- layout --- */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 18px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.topbar .logo {
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 1px;
+}
+
+.topbar .day {
+  color: var(--dim);
+  font-size: 13px;
+}
+
+.topbar .spacer { flex: 1; }
+
+.topbar button {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: border-color .15s, color .15s;
+}
+
+.topbar button:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+main {
+  flex: 1;
+  padding: 24px;
+  max-width: 980px;
+  width: 100%;
+  margin: 0 auto;
+}
+
+/* --- cards --- */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+}
+
+.card h2 {
+  margin: 0 0 12px;
+  font-size: 17px;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.card h2 .tag {
+  font-size: 12px;
+  color: var(--dim);
+  font-weight: 400;
+  margin-left: 8px;
+}
+
+/* --- code blocks --- */
+pre, code {
+  font-family: var(--mono);
+  font-size: 14px;
+}
+
+pre {
+  background: #0d1119;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  margin: 12px 0;
+  line-height: 1.55;
+}
+
+/* --- buttons --- */
+.btn {
+  font-family: inherit;
+  font-size: 14px;
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  transition: all .15s;
+}
+
+.btn:hover { border-color: var(--accent); }
+
+.btn.primary {
+  background: var(--accent);
+  color: #0b0e14;
+  border-color: var(--accent);
+  font-weight: 600;
+}
+
+.btn.primary:hover { filter: brightness(1.08); }
+
+.btn.danger {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+/* --- status lines --- */
+.status { font-size: 13px; color: var(--dim); }
+.status.ok   { color: var(--ok); }
+.status.warn { color: var(--warn); }
+.status.err  { color: var(--err); }
+
+/* --- console output --- */
+.console {
+  background: #05070c;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 14px;
+  font-size: 13px;
+  color: #9fb0c3;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow-y: auto;
+}
+
+.console .prompt {
+  color: var(--accent);
+  user-select: none;
+}
+
+/* --- forms --- */
+input, textarea, select {
+  font-family: inherit;
+  font-size: 14px;
+  background: #0d1119;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  padding: 8px 10px;
+  outline: none;
+  width: 100%;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: var(--accent);
+}
+
+label {
+  display: block;
+  font-size: 13px;
+  color: var(--dim);
+  margin-bottom: 6px;
+}
+
+/* --- progress --- */
+.progress {
+  height: 6px;
+  background: #0d1119;
+  border-radius: 4px;
+  overflow: hidden;
+  margin: 8px 0;
+}
+
+.progress > span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width .3s;
+}
+
+/* --- badges --- */
+.badge {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  color: var(--dim);
+}
+
+.badge.done {
+  color: var(--ok);
+  border-color: var(--ok);
+}
+
+/* --- grid --- */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+@media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+
+/* --- scrollbars (subtle) --- */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #2a3142; }

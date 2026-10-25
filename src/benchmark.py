@@ -1,60 +1,34 @@
 """
-benchmark.py — simple performance benchmarks for CodeQuest AI responses.
-
-Measures:
-- Time to first token (TTFB)
-- Total response time
-- Tokens per second (approximate)
+benchmark.py — quick AI backend benchmark.
+Times N round-trips against the active provider and prints p50/p95.
+Run:  python src/benchmark.py
 """
+import time, statistics, sys, json
+sys.path.insert(0, ".")
+from src.ai_engine import chat, list_models, pick_default_model
 
-import time
-import json
-from ai_engine import chat, list_models, pick_default_model
+N = int(sys.argv[1]) if len(sys.argv) > 1 else 3
 
+provider, models = list_models()
+if provider == "none":
+    print("No provider available — aborting.")
+    sys.exit(1)
+model = pick_default_model(models) if provider == "ollama" else (models[0] if models else None)
+print(f"provider={provider} model={model} n={N}")
 
-def benchmark(model=None, prompt="Explain recursion in 3 sentences.", runs=3):
-    """Run a simple benchmark and print results."""
-    if model is None:
-        provider, models = list_models()
-        model = pick_default_model(models) if models else "gpt-4o-mini"
-    
-    print(f"\n{'='*50}")
-    print(f"Benchmark: {model}")
-    print(f"Prompt: {prompt[:60]}...")
-    print(f"{'='*50}\n")
-    
-    results = []
-    for i in range(runs):
-        start = time.time()
-        try:
-            response = chat(
-                messages=[{"role": "user", "content": prompt}],
-                model=model,
-                max_tokens=100,
-            )
-            elapsed = time.time() - start
-            # Approximate token count (4 chars ≈ 1 token)
-            tokens = len(response) // 4
-            tps = tokens / elapsed if elapsed > 0 else 0
-            
-            results.append({
-                "run": i + 1,
-                "time_s": round(elapsed, 3),
-                "tokens": tokens,
-                "tps": round(tps, 1),
-            })
-            
-            print(f"  Run {i+1}: {elapsed:.3f}s | ~{tokens} tokens | {tps:.1f} tok/s")
-        except Exception as e:
-            print(f"  Run {i+1}: FAILED — {e}")
-    
-    if results:
-        avg_time = sum(r["time_s"] for r in results) / len(results)
-        avg_tps = sum(r["tps"] for r in results) / len(results)
-        print(f"\n  Average: {avg_time:.3f}s | {avg_tps:.1f} tok/s")
-    
-    return results
+times = []
+for i in range(N):
+    t0 = time.perf_counter()
+    out = chat([{"role": "user", "content": "Reply with exactly: OK"}], model=model)
+    dt = time.perf_counter() - t0
+    times.append(dt)
+    print(f"  [{i+1}/{N}] {dt*1000:.0f} ms  response={out.strip()[:40]!r}")
 
-
-if __name__ == "__main__":
-    benchmark()
+times.sort()
+print()
+print(f"min   = {times[0]*1000:.0f} ms")
+print(f"p50   = {times[len(times)//2]*1000:.0f} ms")
+print(f"p95   = {times[min(len(times)-1, int(len(times)*0.95))]*1000:.0f} ms")
+print(f"max   = {times[-1]*1000:.0f} ms")
+print(f"mean  = {statistics.mean(times)*1000:.0f} ms")
+print(f"total = {sum(times):.2f} s")
